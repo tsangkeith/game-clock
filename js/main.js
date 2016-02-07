@@ -12,13 +12,7 @@ function padNumber(number, zeroes) {
 
 function Player(side) {
   this.time = [];
-  this.timer = {
-    container: document.querySelector('#' + side + '-time'),
-    hours: document.querySelector('#' + side + '-time :first-child'),
-    minutes: document.querySelector('#' + side + '-time :nth-child(3)'),
-    seconds: document.querySelector('#' + side + '-time :nth-child(5)'),
-    milliseconds: document.querySelector('#' + side + '-time :last-child')
-  };
+  this.timer = document.querySelector('#' + side + '-time');
 }
 
 function GameClock(players) {
@@ -34,10 +28,10 @@ function GameClock(players) {
 }
 
 GameClock.prototype.parse = function(timer) {
-  var milliseconds = timer.milliseconds.value || 0,
-      seconds      = timer.seconds.value || 0,
-      minutes      = timer.minutes.value || 0,
-      hours        = timer.hours.value || 0;
+  var milliseconds = timer.innerHTML.slice(9) || 0,
+      seconds      = timer.innerHTML.slice(6,8) || 0,
+      minutes      = timer.innerHTML.slice(3,5) || 0,
+      hours        = timer.innerHTML.slice(0,2) || 0;
   return parseInt(milliseconds) + (parseInt(seconds) * 1000) + (parseInt(minutes) * 60000) + (parseInt(hours) * 3600000);
 };
 
@@ -46,19 +40,21 @@ GameClock.prototype.display = function(time, timer) {
       seconds,
       hours,
       minutes;
+
   milliseconds = time % 1000;
-  timer.milliseconds.value = padNumber(milliseconds,3);
+
   hours = time - milliseconds;
   hours /= 1000;
   seconds = hours % 60;
-  timer.seconds.value = padNumber(seconds,2);
+
   hours -= seconds;
   hours /= 60;
   minutes = hours % 60;
-  timer.minutes.value = padNumber(minutes,2);
+
   hours -= minutes;
   hours /= 60;
-  timer.hours.value = padNumber(hours,2);
+
+  timer.innerHTML = padNumber(hours, 2) + ':' + padNumber(minutes, 2) + ':' + padNumber(seconds, 2) + ':' + padNumber(milliseconds, 3);
 };
 
 GameClock.prototype.save = function() {
@@ -71,7 +67,7 @@ GameClock.prototype.save = function() {
   for (var i = 0, l = this.players.length; i < l; i++) {
     this.players[i].time.push(this.parse(this.players[i].timer));
     this.players[i].time.push(this.players[i].time[0] * DEFAULT_WARNING_THRESHOLD);
-    this.players[i].timer.container.classList.remove('configuring');
+    this.players[i].timer.classList.remove('configuring');
   }
 
   this.currentPlayer = this.players[DEFAULT_STARTING_PLAYER];
@@ -84,16 +80,16 @@ GameClock.prototype.run = function() {
   this.referenceTime = currentTime;
 
   if (this.currentPlayer.time[0] <= 0) {
-    this.currentPlayer.timer.container.classList.remove('running', 'warning')
-    this.currentPlayer.timer.container.classList.add('finished');
+    this.currentPlayer.timer.classList.remove('running', 'warning')
+    this.currentPlayer.timer.classList.add('finished');
     this.display(0, this.currentPlayer.timer);
     this.stop();
   } else {
     if (this.currentPlayer.time[0] <= this.currentPlayer.time[1]) {
-      this.currentPlayer.timer.container.classList.remove('running');
-      this.currentPlayer.timer.container.classList.add('warning');
+      this.currentPlayer.timer.classList.remove('running');
+      this.currentPlayer.timer.classList.add('warning');
     } else {
-      this.currentPlayer.timer.container.classList.add('running');
+      this.currentPlayer.timer.classList.add('running');
     }
 
     this.display(this.currentPlayer.time[0], this.currentPlayer.timer);
@@ -118,7 +114,7 @@ GameClock.prototype.operate = function(key) {
   switch (key) {
     case START_KEYCODE:
       if (this.active) {
-        this.currentPlayer.timer.container.classList.remove('running', 'warning');
+        this.currentPlayer.timer.classList.remove('running', 'warning');
         this.currentPlayer = this.players[this.players.indexOf(this.currentPlayer) + 1] || this.players[0];
       } else {
         if (this.active == null) {
@@ -142,10 +138,8 @@ window.onload = function main() {
 
   for (var i = 0, l = gameClock.players.length; i < l; i++) {
     gameClock.display(DEFAULT_TIME_CONTROL, gameClock.players[i].timer);
-    gameClock.players[i].timer.container.classList.add('configuring');
+    gameClock.players[i].timer.classList.add('configuring');
   }
-
-  gameClock.players[0].timer.hours.focus();
 
   document.onkeydown = function(evt) {
     evt = evt || window.event;

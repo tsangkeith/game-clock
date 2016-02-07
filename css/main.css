@@ -2,6 +2,7 @@ body {
   background-color: #002b36;
   color:            #839496;
   font-family:      "Roboto Condensed", sans-serif;
+  font-size: 18px;
   margin: 0;
 }
 
@@ -22,40 +23,15 @@ button:focus {
 }
 
 .time {
-  background:    #073642;
-  border-left:   6px solid #586e75;
+  background: #073642;
+  border-left: 6px solid #586e75;
   border-radius: 6px;
-  border-right:  6px solid #586e75;
-  color:         #586e75;
-  height:        138px;
-  line-height:   1;
-  padding:       0 25px;
-}
-
-.time__digits {
-  background:  transparent;
-  border:      none;
-  color:       inherit;
-  font-family: "Roboto Condensed", sans-serif;
-  font-size:   115px;
-  padding:     0;
-}
-
-.time__digits::-webkit-inner-spin-button,
-.time__digits::-webkit-outer-spin-button {
-  -webkit-appearance: none;
-}
-
-.time__digits--2 {
-  width: 1em;
-}
-
-.time__digits--3 {
-  width: 1.5em;
-}
-
-.time__separator {
-  font-size:  115px;
+  border-right: 6px solid #586e75;
+  color: #586e75;
+  font-size: 6rem;
+  line-height: 1.4;
+  outline: none;
+  padding: 0 25px;
 }
 
 .configuring {
@@ -63,8 +39,8 @@ button:focus {
   color:        #839496;
 }
 
-.configuring .time__digits:hover,
-.configuring .time__digits:focus {
+.configuring:hover,
+.configuring:focus {
   color: #93a1a1;
 }
 
