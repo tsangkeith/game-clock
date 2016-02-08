@@ -1,7 +1,7 @@
 body {
   background-color: #002b36;
-  color:            #839496;
-  font-family:      "Roboto Condensed", sans-serif;
+  color: #839496;
+  font-family: "Roboto Condensed", sans-serif;
   font-size: 18px;
   margin: 0;
 }
@@ -36,7 +36,7 @@ button:focus {
 
 .configuring {
   border-color: #839496;
-  color:        #839496;
+  color: #839496;
 }
 
 .configuring:hover,
@@ -46,15 +46,15 @@ button:focus {
 
 .running {
   border-color: #93a1a1;
-  color:        #93a1a1;
+  color: #93a1a1;
 }
 
 .warning {
   border-color: #b58900;
-  color:        #b58900;
+  color: #b58900;
 }
 
 .finished {
   border-color: #cb4b16;
-  color:        #cb4b16;
+  color: #cb4b16;
 }
