@@ -15,6 +15,7 @@ function getCaretPosition(element) {
   var doc = element.ownerDocument || element.document;
   var win = doc.defaultView || doc.parentWindow;
   var sel;
+
   if (typeof win.getSelection != "undefined") {
     sel = win.getSelection();
     if (sel.rangeCount > 0) {
@@ -31,6 +32,7 @@ function getCaretPosition(element) {
     preCaretTextRange.setEndPoint("EndToEnd", textRange);
     caretOffset = preCaretTextRange.text.length;
   }
+
   return caretOffset;
 }
 
@@ -53,13 +55,12 @@ function GameClock(players) {
 }
 
 GameClock.prototype.parse = function(timer) {
-  var values       = timer.innerHTML.split(':'),
-      mayHaveMS    = values[values.length - 1].split('.'),    
-      milliseconds = mayHaveMS[1] ? mayHaveMS[1].substr(0, 3) : 0,
-      seconds      = mayHaveMS[0] || 0,
-      minutes      = values[values.length - 2] || 0,
-      hours        = values[values.length - 3] || 0;
-  return parseInt(milliseconds) + (parseInt(seconds) * 1000) + (parseInt(minutes) * 60000) + (parseInt(hours) * 3600000);
+  var values       = timer.innerHTML.split(/[:.]/), 
+      milliseconds = Math.abs(values[values.length - 1]) || 0,
+      seconds      = Math.abs(values[values.length - 2]) || 0,
+      minutes      = Math.abs(values[values.length - 3]) || 0,
+      hours        = Math.abs(values[values.length - 4]) || 0;
+  return parseInt(milliseconds, 10) + (parseInt(seconds, 10) * 1000) + (parseInt(minutes, 10) * 60000) + (parseInt(hours, 10) * 3600000);
 };
 
 GameClock.prototype.display = function(time, timer) {
@@ -105,6 +106,7 @@ GameClock.prototype.warn = function(timer, warning, times) {
 
 GameClock.prototype.save = function() {
   var l = this.players.length;
+
   for (var i = 0; i < l; i++) {
     var time = this.parse(this.players[i].timer)
     if (Number.isNaN(time)) {
@@ -115,6 +117,7 @@ GameClock.prototype.save = function() {
     this.players[i].time.push(time * DEFAULT_WARNING_THRESHOLD);
     this.display(time, this.players[i].timer);
   }
+
   for (var i = 0; i < l; i++) {
     this.players[i].timer.classList.remove('configuring');
     this.players[i].timer.setAttribute('contenteditable', 'false');
@@ -146,7 +149,6 @@ GameClock.prototype.run = function() {
 
 GameClock.prototype.start = function() {
   var self = this;
-
   this.referenceTime = new Date().getTime();
   this.active = setInterval(function() {
     self.run();
@@ -160,53 +162,54 @@ GameClock.prototype.stop = function() {
 
 GameClock.prototype.operate = function(evt) {
   switch (evt.keyCode) {
-
     case START_KEYCODE:
-
       evt.preventDefault();
+
       if (this.active) {
         this.currentPlayer.timer.classList.remove('running', 'warning');
         this.currentPlayer = this.players[this.players.indexOf(this.currentPlayer) + 1] || this.players[0];
       } else if (this.active == false) {
         this.start();
       }
+
       break;
 
     case PAUSE_KEYCODE:
-
       evt.preventDefault();
+
       if (this.active) {
         this.stop();
       } else if (this.active == false) {
         this.start();
       }
+
       break;
   }
 };
 
 GameClock.prototype.input = function(evt) {
   var keycode = evt.keyCode;
+
   switch (true) {
-
     case (keycode == 13 || keycode == 32): // enter & spacebar key
-
       evt.preventDefault();
+
       try {
           this.save();
       }
       catch (err) {
         break;
       }
+
       this.start();
       break;
 
     case ((keycode > 47 && keycode < 58) || // number keys
           (keycode > 95 && keycode < 112)): // numpad keys
-
       var position = getCaretPosition(document.activeElement),
           text     = document.activeElement.innerHTML;
 
-    if (position == text.length || text[position].search(/[:.]/) == 0) {
+      if (position == text.length || text[position].search(/[:.]/) == 0) {
         evt.preventDefault();
       } else if (text[position].search(/[\d\-]/) == 0) {
         document.activeElement.innerHTML = text.slice(0, position) + text.slice(position + 1, text.length);
@@ -217,18 +220,17 @@ GameClock.prototype.input = function(evt) {
         sel.removeAllRanges();
         sel.addRange(range);
       }
+
       break;
 
     case (keycode == 13 ||                    // return key
           (keycode > 64 && keycode < 91) ||   // letter keys
           (keycode > 185 && keycode < 193) || // ;=,-./` (in order)
           (keycode > 218 && keycode < 223)):  // [\]' (in order)
-
       evt.preventDefault();
       break;
 
     case (keycode == 8): // backspace key
-
       var position = getCaretPosition(document.activeElement),
           text     = document.activeElement.innerHTML;
 
@@ -244,10 +246,10 @@ GameClock.prototype.input = function(evt) {
         sel.removeAllRanges();
         sel.addRange(range);
       }
+
       break;
 
     case (keycode == 46): // delete key
-
       var position = getCaretPosition(document.activeElement),
           text     = document.activeElement.innerHTML;
 
@@ -262,6 +264,7 @@ GameClock.prototype.input = function(evt) {
         sel.removeAllRanges();
         sel.addRange(range);
       }
+
       break;
   }
 }
