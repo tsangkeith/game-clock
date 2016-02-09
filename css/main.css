@@ -6,13 +6,6 @@ body {
   margin: 0;
 }
 
-input:focus,
-select:focus,
-textarea:focus,
-button:focus {
-  outline: none;
-}
-
 .main {
   align-items: center;
   box-sizing: border-box;
@@ -27,11 +20,16 @@ button:focus {
   border-left: 6px solid #586e75;
   border-radius: 6px;
   border-right: 6px solid #586e75;
+  box-sizing: border-box;
   color: #586e75;
   font-size: 6rem;
   line-height: 1.4;
+  text-align: center;
+  width: 36rem;
+}
+
+.time:focus {
   outline: none;
-  padding: 0 25px;
 }
 
 .configuring {
