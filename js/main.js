@@ -10,19 +10,38 @@ function padNumber(number, zeroes) {
   return paddedNumber.substr(paddedNumber.length - zeroes);
 }
 
+function getCaretPosition(element) {
+  var caretOffset = 0;
+  var doc = element.ownerDocument || element.document;
+  var win = doc.defaultView || doc.parentWindow;
+  var sel;
+
+  if (typeof win.getSelection != "undefined") {
+    sel = win.getSelection();
+    if (sel.rangeCount > 0) {
+      var range = win.getSelection().getRangeAt(0);
+      var preCaretRange = range.cloneRange();
+      preCaretRange.selectNodeContents(element);
+      preCaretRange.setEnd(range.endContainer, range.endOffset);
+      caretOffset = preCaretRange.toString().length;
+    }
+  } else if ( (sel = doc.selection) && sel.type != "Control") {
+    var textRange = sel.createRange();
+    var preCaretTextRange = doc.body.createTextRange();
+    preCaretTextRange.moveToElementText(element);
+    preCaretTextRange.setEndPoint("EndToEnd", textRange);
+    caretOffset = preCaretTextRange.text.length;
+  }
+
+  return caretOffset;
+}
+
 function Player(side) {
   this.time = [];
-  this.timer = {
-    container: document.querySelector('#' + side + '-time'),
-    hours: document.querySelector('#' + side + '-time :first-child'),
-    minutes: document.querySelector('#' + side + '-time :nth-child(3)'),
-    seconds: document.querySelector('#' + side + '-time :nth-child(5)'),
-    milliseconds: document.querySelector('#' + side + '-time :last-child')
-  };
+  this.timer = document.querySelector('#' + side + '-time');
 }
 
 function GameClock(players) {
-  this.currentPlayer = null;
   this.referenceTime = null;
   this.active = null;
   this.players = [];
@@ -31,14 +50,17 @@ function GameClock(players) {
     var player = new Player(players[i]);
     this.players.push(player);
   }
+
+  this.currentPlayer = this.players[DEFAULT_STARTING_PLAYER];
 }
 
 GameClock.prototype.parse = function(timer) {
-  var milliseconds = timer.milliseconds.value || 0,
-      seconds      = timer.seconds.value || 0,
-      minutes      = timer.minutes.value || 0,
-      hours        = timer.hours.value || 0;
-  return parseInt(milliseconds) + (parseInt(seconds) * 1000) + (parseInt(minutes) * 60000) + (parseInt(hours) * 3600000);
+  var values       = timer.innerHTML.split(/[:.]/), 
+      milliseconds = Math.abs(values[values.length - 1]) || 0,
+      seconds      = Math.abs(values[values.length - 2]) || 0,
+      minutes      = Math.abs(values[values.length - 3]) || 0,
+      hours        = Math.abs(values[values.length - 4]) || 0;
+  return parseInt(milliseconds, 10) + (parseInt(seconds, 10) * 1000) + (parseInt(minutes, 10) * 60000) + (parseInt(hours, 10) * 3600000);
 };
 
 GameClock.prototype.display = function(time, timer) {
@@ -46,35 +68,60 @@ GameClock.prototype.display = function(time, timer) {
       seconds,
       hours,
       minutes;
+
   milliseconds = time % 1000;
-  timer.milliseconds.value = padNumber(milliseconds,3);
+
   hours = time - milliseconds;
   hours /= 1000;
   seconds = hours % 60;
-  timer.seconds.value = padNumber(seconds,2);
+
   hours -= seconds;
   hours /= 60;
   minutes = hours % 60;
-  timer.minutes.value = padNumber(minutes,2);
+
   hours -= minutes;
   hours /= 60;
-  timer.hours.value = padNumber(hours,2);
+
+  timer.innerHTML = padNumber(hours, 2) + ':' + padNumber(minutes, 2) + ':' + padNumber(seconds, 2) + '.' + padNumber(milliseconds, 3);
 };
 
+GameClock.prototype.warn = function(timer, warning, times) {
+  var original = timer.innerHTML,
+      iter     = times * 2;
+
+  timer.setAttribute('contenteditable', 'false');
+  timer.innerHTML = warning;
+
+  var interval = setInterval(function() {
+        timer.classList.toggle('configuring');
+        timer.classList.toggle('warning');
+        iter--;
+        if (iter == 0) {
+          clearInterval(interval);
+          timer.innerHTML = original;
+          timer.setAttribute('contenteditable', 'true');
+        }
+      }, 500);
+}
+
 GameClock.prototype.save = function() {
-  var inputs = document.querySelectorAll('.time input:enabled');
+  var l = this.players.length;
 
-  for (var i = 0, l = inputs.length; i < l; i++) {
-    inputs[i].setAttribute('disabled', 'disabled');
+  for (var i = 0; i < l; i++) {
+    var time = this.parse(this.players[i].timer)
+    if (Number.isNaN(time)) {
+      this.warn(this.players[i].timer, "INVALID TIME", 3);
+      throw "NaN";
+    }
+    this.players[i].time.push(time);
+    this.players[i].time.push(time * DEFAULT_WARNING_THRESHOLD);
+    this.display(time, this.players[i].timer);
   }
 
-  for (var i = 0, l = this.players.length; i < l; i++) {
-    this.players[i].time.push(this.parse(this.players[i].timer));
-    this.players[i].time.push(this.players[i].time[0] * DEFAULT_WARNING_THRESHOLD);
-    this.players[i].timer.container.classList.remove('configuring');
+  for (var i = 0; i < l; i++) {
+    this.players[i].timer.classList.remove('configuring');
+    this.players[i].timer.setAttribute('contenteditable', 'false');
   }
-
-  this.currentPlayer = this.players[DEFAULT_STARTING_PLAYER];
 };
 
 GameClock.prototype.run = function() {
@@ -84,16 +131,16 @@ GameClock.prototype.run = function() {
   this.referenceTime = currentTime;
 
   if (this.currentPlayer.time[0] <= 0) {
-    this.currentPlayer.timer.container.classList.remove('running', 'warning')
-    this.currentPlayer.timer.container.classList.add('finished');
+    this.currentPlayer.timer.classList.remove('running', 'warning')
+    this.currentPlayer.timer.classList.add('finished');
     this.display(0, this.currentPlayer.timer);
     this.stop();
   } else {
     if (this.currentPlayer.time[0] <= this.currentPlayer.time[1]) {
-      this.currentPlayer.timer.container.classList.remove('running');
-      this.currentPlayer.timer.container.classList.add('warning');
+      this.currentPlayer.timer.classList.remove('running');
+      this.currentPlayer.timer.classList.add('warning');
     } else {
-      this.currentPlayer.timer.container.classList.add('running');
+      this.currentPlayer.timer.classList.add('running');
     }
 
     this.display(this.currentPlayer.time[0], this.currentPlayer.timer);
@@ -102,7 +149,6 @@ GameClock.prototype.run = function() {
 
 GameClock.prototype.start = function() {
   var self = this;
-
   this.referenceTime = new Date().getTime();
   this.active = setInterval(function() {
     self.run();
@@ -114,41 +160,130 @@ GameClock.prototype.stop = function() {
   this.active = false;
 };
 
-GameClock.prototype.operate = function(key) {
-  switch (key) {
+GameClock.prototype.operate = function(evt) {
+  switch (evt.keyCode) {
     case START_KEYCODE:
+      evt.preventDefault();
+
       if (this.active) {
-        this.currentPlayer.timer.container.classList.remove('running', 'warning');
+        this.currentPlayer.timer.classList.remove('running', 'warning');
         this.currentPlayer = this.players[this.players.indexOf(this.currentPlayer) + 1] || this.players[0];
-      } else {
-        if (this.active == null) {
-          this.save();
-        }
+      } else if (this.active == false) {
         this.start();
       }
+
       break;
+
     case PAUSE_KEYCODE:
+      evt.preventDefault();
+
       if (this.active) {
         this.stop();
       } else if (this.active == false) {
         this.start();
       }
+
       break;
   }
 };
+
+GameClock.prototype.input = function(evt) {
+  var keycode = evt.keyCode;
+
+  switch (true) {
+    case (keycode == 13 || keycode == 32): // enter & spacebar key
+      evt.preventDefault();
+
+      try {
+          this.save();
+      }
+      catch (err) {
+        break;
+      }
+
+      this.start();
+      break;
+
+    case ((keycode > 47 && keycode < 58) || // number keys
+          (keycode > 95 && keycode < 112)): // numpad keys
+      var position = getCaretPosition(document.activeElement),
+          text     = document.activeElement.innerHTML;
+
+      if (position == text.length || text[position].search(/[:.]/) == 0) {
+        evt.preventDefault();
+      } else if (text[position].search(/[\d\-]/) == 0) {
+        document.activeElement.innerHTML = text.slice(0, position) + text.slice(position + 1, text.length);
+        var range = document.createRange();
+        var sel = window.getSelection();
+        range.setStart(document.activeElement.childNodes[0], position);
+        range.collapse(true);
+        sel.removeAllRanges();
+        sel.addRange(range);
+      }
+
+      break;
+
+    case (keycode == 13 ||                    // return key
+          (keycode > 64 && keycode < 91) ||   // letter keys
+          (keycode > 185 && keycode < 193) || // ;=,-./` (in order)
+          (keycode > 218 && keycode < 223)):  // [\]' (in order)
+      evt.preventDefault();
+      break;
+
+    case (keycode == 8): // backspace key
+      var position = getCaretPosition(document.activeElement),
+          text     = document.activeElement.innerHTML;
+
+      if (position > 0) {
+        evt.preventDefault();
+        if (text[position - 1].search(/[\d\-]/) == 0) {
+          document.activeElement.innerHTML = text.slice(0, position - 1) + '-' + text.slice(position, text.length);
+        }
+        var range = document.createRange();
+        var sel = window.getSelection();
+        range.setStart(document.activeElement.childNodes[0], position - 1);
+        range.collapse(true);
+        sel.removeAllRanges();
+        sel.addRange(range);
+      }
+
+      break;
+
+    case (keycode == 46): // delete key
+      var position = getCaretPosition(document.activeElement),
+          text     = document.activeElement.innerHTML;
+
+      evt.preventDefault();
+
+      if (text[position].search(/[\d\-]/) == 0) {
+        document.activeElement.innerHTML = text.slice(0, position) + '-' + text.slice(position + 1, text.length);
+        var range = document.createRange();
+        var sel = window.getSelection();
+        range.setStart(document.activeElement.childNodes[0], position);
+        range.collapse(true);
+        sel.removeAllRanges();
+        sel.addRange(range);
+      }
+
+      break;
+  }
+}
 
 window.onload = function main() {
   var gameClock = new GameClock(PLAYERS);
 
   for (var i = 0, l = gameClock.players.length; i < l; i++) {
     gameClock.display(DEFAULT_TIME_CONTROL, gameClock.players[i].timer);
-    gameClock.players[i].timer.container.classList.add('configuring');
+    gameClock.players[i].timer.classList.add('configuring');
   }
-
-  gameClock.players[0].timer.hours.focus();
+  gameClock.players[0].timer.focus();
 
   document.onkeydown = function(evt) {
     evt = evt || window.event;
-    gameClock.operate(evt.keyCode);
+    if (document.activeElement.classList.contains('time')) {
+      gameClock.input(evt);
+    } else if (document.activeElement.classList.length == 0 && !evt.repeat) {
+      gameClock.operate(evt);
+    }
   }
 };
